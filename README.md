@@ -8,10 +8,30 @@ Este repositório documenta a execução prática de testes de intrusão simulad
 
 O ambiente foi montado utilizando o **Oracle VirtualBox**, isolando os sistemas em uma rede interna/host-only para garantir a segurança dos testes.
 
-*   **Máquina de Ataque:** Kali Linux (`kali-linux-2026.3-virtualbox-amd64`)
-*   **Máquina Alvo:** Metasploitable 2 (`Metasploitable.vmdk`)
-*   **Snapshot de Segurança:** Foi criado um ponto de restauração (*Snapshot*) chamado `configuracaoinicial` na máquina alvo para garantir a integridade do laboratório.
-*   **Identificação do IP Alvo:** Através do comando `ip a` executado diretamente no terminal do Metasploitable, identificou-se o endereço IP fixado na interface `eth0`: **`192.168.56.101`**.
+### Instalação e Inicialização das Máquinas
+*   **Máquina de Ataque:** Kali Linux
+*   **Máquina Alvo:** Metasploitable 2
+
+![Kali Instalado](1-%20Kali%20instalado.png)
+*Figura 1: Instalação do ambiente Kali Linux.*
+
+![Meta Instalado](2-%20Meta%20instalado.png)
+*Figura 2: Inicialização e configuração da máquina Metasploitable 2.*
+
+![Meta Iniciado](3-%20meta%20iniciado.png)
+*Figura 3: Sistema alvo pronto para os testes.*
+
+### Snapshot de Segurança
+Foi criado um ponto de restauração (*Snapshot*) chamado `configuracaoinicial` na máquina alvo para garantir a integridade do laboratório antes dos ataques.
+
+![Snapshot Criado](4-%20Snapshot%20criado.png)
+*Figura 4: Criação do Snapshot de segurança no VirtualBox.*
+
+### Identificação do IP Alvo
+Através do comando `ip a` executado diretamente no terminal do Metasploitable, identificou-se o endereço IP fixado na interface `eth0`: **`192.168.56.101`**.
+
+![IP Meta](5-%20Ip%20Meta.png)
+*Figura 5: Identificação do IP da máquina vulnerável.*
 
 ---
 
@@ -20,71 +40,62 @@ O ambiente foi montado utilizando o **Oracle VirtualBox**, isolando os sistemas 
 Para mapear a superfície de ataque e descobrir quais serviços e informações estavam expostos no alvo, realizaram-se varreduras a partir do terminal do Kali Linux.
 
 ### Varredura de Portas e Serviços (Nmap)
-```bash
-ping -c 3 192.168.56.101
-nmap -sV -p 21,22,80,445,139 192.168.56.101
-```
-*Serviços essenciais identificados:*
-*   **Porta 21/tcp:** FTP (`vsftpd 2.3.4`)
-*   **Porta 80/tcp:** HTTP (`Apache httpd 2.2.8`)
-*   **Portas 139 e 445/tcp:** NetBIOS/SMB (`Samba smbd 3.X`)
+Realizou-se a verificação de portas abertas para entender quais serviços estavam ativos.
 
-### Enumeração de Usuários e Domínio (enum4linux)
-```bash
-enum4linux -a 192.168.56.101
-```
-*   **Informações Coletadas:**
-    *   **Grupo de Trabalho/Domínio:** `WORKGROUP`
-    *   **Nome NetBIOS da Máquina:** `METASPLOITABLE`
-    *   **Status dos Serviços:** Identificação ativa de papéis como `Workstation` e `File Server`.
+![Comando Nmap](6-%20Comando%20para%20verificar%20port....png)
+*Figura 6: Execução do comando de varredura.*
+
+![Portas Abertas](7-%20Portas%20abertas%20do%20FTP.png)
+*Figura 7: Identificação das portas abertas e serviços (FTP, HTTP, SMB).*
 
 ---
 
 ## 📋 3. Criação de Dicionários Personalizados (Wordlists)
 
-Utilizando comandos estruturados de terminal, foram criados arquivos de texto contendo combinações comuns de usuários e senhas para alimentar os testes automatizados:
+Utilizando comandos estruturados de terminal, foram criados arquivos de texto contendo combinações comuns de usuários e senhas para alimentar os testes automatizados.
 
-```bash
-# Criação de listas gerais e para o SMB
-echo -e 'user\nmsfadmin\nadmin\nroot' > users.txt
-echo -e '123456\npassword\nnqwerty\nmsfadmin' > pass.txt
-
-echo -e 'user\nmsfadmin\nnservice' > smb_users.txt
-echo -e 'password\n123456\nWelcom123\nmsfadmin' > senhas_spray.txt
-```
+![Lista de Usuários e Senhas](9-%20Lista%20de%20usuarios%20e%20senhas%20cri....png)
+*Figura 8: Estruturação das wordlists personalizadas para o ataque.*
 
 ---
 
 ## ⚔️ 4. Execução dos Ataques de Força Bruta e Resultados
 
 ### Cenário A: Força Bruta e Validação via FTP
-O Medusa foi configurado para testar combinações contra a porta 21:
-```bash
-medusa -h 192.168.56.101 -U users.txt -P pass.txt -M ftp
-```
-*   **Resultado:** A ferramenta encontrou a credencial válida para o sistema: `msfadmin / msfadmin [SUCCESS]`.
-*   **Validação de Acesso:** O acesso foi verificado manualmente via terminal autenticando-se com sucesso no servidor FTP remoto (`230 Login successful`).
+O Medusa foi configurado para testar combinações contra a porta 21 (FTP).
 
-### Cenário B: Auditoria de Credenciais no SMB (Samba)
-Para simular um ataque focado na infraestrutura de rede local e compartilhamentos, utilizamos o módulo `smbnt`:
-```bash
-medusa -h 192.168.56.101 -U smb_users.txt -P senhas_spray.txt -M smbnt -t 2 -T 50
-```
-*   **Resultado:** Sucesso na quebra de autenticação com acesso liberado:
-    *   **Credencial Identificada:** `msfadmin / msfadmin`
-    *   **Mensagem do Sistema:** `SUCCESS (ADMIN$ - Access Allowed)`
-*   **Enumeração de Compartilhamento:** Invocando o utilitário `smbclient` com a credencial descoberta, mapeou-se os diretórios expostos na rede (como `print$`, `tmp`, `opt`, `IPC$`, `ADMIN$` e o diretório home do usuário).
+![Sucesso no Ataque Medusa FTP](10-%20Sucesso%20no%20ataque%20-%20medus....png)
+*Figura 9: Medusa localizando as credenciais válidas do FTP.*
+
+![Conectado ao FTP](8-%20Conectado%20ao%20FTP.png)
+*Figura 10: Tentativa de login e estabelecimento de conexão.*
+
+![Login com Sucesso FTP](11-%20login%20com%20sucesso%20no%20ftp%20in....png)
+*Figura 11: Validação manual de acesso ao servidor FTP.*
+
+### Cenário B: Auditoria de Credenciais no SMB (Samba) e Cruzamento de Informações
+Para simular um ataque focado na infraestrutura de rede local e compartilhamentos, utilizamos comandos de varredura e o módulo do Medusa para quebrar as credenciais do protocolo SMB.
+
+![Sucesso ao Cruzar Informações](12-%20Sucesso%20ao%20cruzar%20informa%C3%A7....png)
+*Figura 12: Mapeamento e validação de informações do sistema alvo.*
+
+![Comando do Ataque SMB](14-%20comando%20do%20ataque%202.png)
+*Figura 13: Execução do comando Medusa direcionado ao serviço SMB.*
+
+![Sucesso no Ataque Medusa SMB](13-%20sucesso%20no%20ataque%20-%20medus....png)
+*Figura 14: Credencial administrativa válida identificada no SMB.*
 
 ### Cenário C: Automação Web via HTTP (Formulário DVWA)
-Para testar a segurança do portal web do Damn Vulnerable Web Application (DVWA), executou-se a sintaxe modular contra o formulário de login:
-```bash
-medusa -h 192.168.56.101 -U users.txt -P pass.txt -M http \
--m PAGE:'/dvwa/login.php' \
--m FORM:'username=^USER^&password=^PASS^&Login=Login' \
--m FAIL:'Login failed' -t 60
-```
-*   **Resultado:** A ferramenta descobriu múltiplas combinações vulneráveis configuradas no ambiente (como `admin / 123456 [SUCCESS]` e `msfadmin / msfadmin [SUCCESS]`).
-*   **Validação do Acesso:** Autenticação realizada com sucesso no painel administrativo principal do DVWA através do navegador.
+Para testar a segurança do portal web do Damn Vulnerable Web Application (DVWA), executou-se a simulação de password spraying e força bruta corporativa.
+
+![Simulando Ataque Corporativo](15-%20Simulando%20ataque%20corporat....png)
+*Figura 15: Configuração do ataque contra o formulário de login HTTP.*
+
+![Simulando Ataque de Senhas](16-%20Simulando%20ataque%20de%20senh....png)
+*Figura 16: Automação massiva de tentativas de autenticação web.*
+
+![Ataque Bem Sucedido](17-%20Ataque%20bm%20sucedido%20-%20senh....png)
+*Figura 17: Credenciais do DVWA quebradas com sucesso.*
 
 ---
 
