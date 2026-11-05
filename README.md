@@ -106,4 +106,3 @@ Com base nas vulnerabilidades e facilidades encontradas durante as simulações,
 1.  **Políticas Rígidas de Credenciais:** Desativar completamente usuários padrões de fábrica (como `msfadmin`), remover credenciais fracas pré-configuradas e impor políticas que exijam senhas longas e complexas.
 2.  **Bloqueio de Contas (Account Lockout):** Configurar mecanismos no sistema operacional, serviços de rede (SSH, FTP, SMB) e aplicações web que suspendam temporariamente o login de usuários após sucessivas tentativas incorretas, inviabilizando ataques automatizados como os do Medusa.
 3.  **Implementação de Mecanismos de Proteção Ativa:** Adotar soluções de monitoramento e detecção como o **Fail2ban** para analisar logs de autenticação em tempo real e banir temporariamente no Firewall do servidor os endereços IP que demonstrem padrões de varreduras agressivas ou ataques de força bruta.
-
