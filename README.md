@@ -12,8 +12,12 @@ O ambiente foi montado utilizando o **Oracle VirtualBox**, isolando os sistemas 
 *   **Máquina de Ataque:** Kali Linux
 *   **Máquina Alvo:** Metasploitable 2
 
+  
+
 ![Kali Instalado](1-%20Kali%20instalado.png)
 *Figura 1: Instalação do ambiente Kali Linux.*
+
+
 
 <img width="1365" height="765" alt="2 - Meta instalado" src="https://github.com/user-attachments/assets/ce7079c0-bb42-4290-8a78-e919b6972ba4" />
 
